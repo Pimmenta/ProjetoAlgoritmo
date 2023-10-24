@@ -1,0 +1,102 @@
+class Grafico:
+    def __init__(self):
+        self.grafico = {}
+
+    def add_edge(self, u, v):
+        if u not in self.grafico:
+            self.grafico[u] = []
+        if v not in self.grafico:
+            self.grafico[v] = []
+        self.grafico[u].append(v)
+        self.grafico[v].append(u)
+
+    def remove_edge(self, u, v):
+        self.grafico[u].remove(v)
+        self.grafico[v].remove(u)
+
+    def get_edges(self):
+        edges = set()
+        for u in self.grafico:
+            for v in self.grafico[u]:
+                if (u, v) not in edges and (v, u) not in edges:
+                    edges.add((u, v))
+        return edges
+
+    def get_betweenness_centrality(self):
+        betweenness = {node: 0 for node in self.grafico}
+        for node in self.grafico:
+            stack = [node]
+            visited = {v: False for v in self.grafico}
+            paths = {v: [] for v in self.grafico}
+            while stack:
+                current_node = stack.pop()
+                visited[current_node] = True
+                for neighbor in self.grafico[current_node]:
+                    if not visited[neighbor]:
+                        stack.append(neighbor)
+                        paths[neighbor].append(current_node)
+            dependencies = {v: 0 for v in self.grafico}
+            while stack:
+                current_node = stack.pop()
+                for neighbor in paths[current_node]:
+                    dependencies[neighbor] += 1 + dependencies[current_node]
+                    betweenness[neighbor] += dependencies[current_node] + 1
+                if current_node != node:
+                    betweenness[current_node] += 1
+        return betweenness
+
+    def girvan_newman(self):
+        def find_best_edge(grafico):
+            betweenness = grafico.get_betweenness_centrality()
+            max_betweenness = max(betweenness.values())
+            best_edge = None
+            for u, v in grafico.get_edges():
+                if betweenness[u] == max_betweenness and betweenness[v] == max_betweenness:
+                    best_edge = (u, v)
+                    break
+            return best_edge
+
+        result = []
+        while len(self.grafico) > 0:
+            edge = find_best_edge(self)
+            if edge:
+                self.remove_edge(*edge)
+                components = self.get_connected_components()
+                result.append(components)
+            else:
+                break
+        return result
+
+    def get_connected_components(self):
+        components = []
+        visited = {v: False for v in self.grafico}
+        for node in self.grafico:
+            if not visited[node]:
+                component = []
+                stack = [node]
+                while stack:
+                    current_node = stack.pop()
+                    if not visited[current_node]:
+                        visited[current_node] = True
+                        component.append(current_node)
+                        stack.extend(neighbor for neighbor in self.grafico[current_node] if not visited[neighbor])
+                components.append(component)
+        return components
+
+# Exemplo de uso
+if __name__ == "__main__":
+    G = Grafico()
+    G.add_edge(0, 1)
+    G.add_edge(0, 2)
+    G.add_edge(0, 3)
+    G.add_edge(1, 4)
+    G.add_edge(2, 5)
+    G.add_edge(3, 6)
+    G.add_edge(4, 7)
+    G.add_edge(5, 8)
+    G.add_edge(6, 9)
+    G.add_edge(4, 9)
+
+    communities = G.girvan_newman()
+    for i, community in enumerate(communities):
+        print(f"Comunidade {i + 1}: {community}")
